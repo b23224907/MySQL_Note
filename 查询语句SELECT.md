@@ -155,6 +155,26 @@ SELECT * FROM employees WHERE `name` = "TOM";#字符串过滤，个别平台或�
 
 
 
+### 11. 查询表结构
+
+- DESC [表名];
+
+```sql
+DESC departments;
+/* result
++-----------------+-------------+------+-----+---------+-------+
+| Field           | Type        | Null | Key | Default | Extra |
++-----------------+-------------+------+-----+---------+-------+
+| department_id   | int         | NO   | PRI | 0       |       |
+| department_name | varchar(30) | NO   |     | NULL    |       |
+| manager_id      | int         | YES  | MUL | NULL    |       |
+| location_id     | int         | YES  | MUL | NULL    |       |
++-----------------+-------------+------+-----+---------+-------+
+*/
+```
+
+
+
 
 
 ## 运算符
@@ -354,5 +374,353 @@ SELECT employee_id, last_name FROM employees LIMIT 20 OFFSET 40;	#每页显示20
 
 
 
-### 1.
+### 1. 笛卡尔积错误
 
+- 多表查询中因为没有建立多表之间连接引起的多表查询的问题就称之为:“笛卡尔积的*错误*”
+- 出现原因：①省略了连接条件。 ②连接条件无效。 ③所有表中的行互相连接。
+
+```sql
+SELECT employee_id,department_name FROM employees,departments;#未添加连接条件，将会出现M*N条查询结果（M N为两张表的数据行数）
+```
+
+
+
+### 2. 多表查询实现
+
+- 增加表的连接条件**（n个表的连接至少要有 n-1 个连接条件）**
+
+```sql
+SELECT employee_id,department_name 
+FROM employees,departments 
+WHERE employees.department_id = departments.department_id; #表的连接条件
+```
+
+- 如果多表查询中出现多个表都存在的字段，则必须指明此字段所在的表**（规范建议：多表查询时, 每个字段都指明所属表）**
+
+```sql
+#错误：department_id两个表都存在
+SELECT employee_id,department_name,department_id
+FROM employees,departments 
+WHERE employees.department_id = departments.department_id; #表的连接条件
+
+#正确：指明字段所属表
+SELECT employee_id,department_name,employees.department_id
+FROM employees,departments 
+WHERE employees.department_id = departments.department_id; #表的连接条件
+```
+
+- 可以在FROM中给表取别名，进行优化**（如果给表起了别名，则在后续操作中必须使用表的别名，而不能使用表的原名）**
+
+```sql
+SELECT employee_id,department_name,emp.department_id
+FROM employees emp,departments  dept
+WHERE emp.department_id = dept.department_id; #表的连接条件
+```
+
+- 例子：使用employees\departments\locations 三个表来获取名为'Abel'员工的所在城市
+
+```sql
+#先展示表结构
+DESC employees;
+/*
++----------------+-------------+------+-----+---------+-------+
+| Field          | Type        | Null | Key | Default | Extra |
++----------------+-------------+------+-----+---------+-------+
+| employee_id    | int         | NO   | PRI | 0       |       |
+| first_name     | varchar(20) | YES  |     | NULL    |       |
+| last_name      | varchar(25) | NO   |     | NULL    |       |
+| email          | varchar(25) | NO   | UNI | NULL    |       |
+| phone_number   | varchar(20) | YES  |     | NULL    |       |
+| hire_date      | date        | NO   |     | NULL    |       |
+| job_id         | varchar(10) | NO   | MUL | NULL    |       |
+| salary         | double(8,2) | YES  |     | NULL    |       |
+| commission_pct | double(2,2) | YES  |     | NULL    |       |
+| manager_id     | int         | YES  | MUL | NULL    |       |
+| department_id  | int         | YES  | MUL | NULL    |       |
++----------------+-------------+------+-----+---------+-------+
+*/
+DESC departments;
+/*
++-----------------+-------------+------+-----+---------+-------+
+| Field           | Type        | Null | Key | Default | Extra |
++-----------------+-------------+------+-----+---------+-------+
+| department_id   | int         | NO   | PRI | 0       |       |
+| department_name | varchar(30) | NO   |     | NULL    |       |
+| manager_id      | int         | YES  | MUL | NULL    |       |
+| location_id     | int         | YES  | MUL | NULL    |       |
++-----------------+-------------+------+-----+---------+-------+
+*/
+DESC locations;
+/*
++----------------+-------------+------+-----+---------+-------+
+| Field          | Type        | Null | Key | Default | Extra |
++----------------+-------------+------+-----+---------+-------+
+| location_id    | int         | NO   | PRI | 0       |       |
+| street_address | varchar(40) | YES  |     | NULL    |       |
+| postal_code    | varchar(12) | YES  |     | NULL    |       |
+| city           | varchar(30) | NO   |     | NULL    |       |
+| state_province | varchar(25) | YES  |     | NULL    |       |
+| country_id     | char(2)     | YES  | MUL | NULL    |       |
++----------------+-------------+------+-----+---------+-------+
+*/
+#以上可见员工名存在于employees表，城市信息位于locations表，departments可以将两表搭桥关联，添加关联条件进行查询
+
+SELECT emp.employee_id,emp.last_name,dept.department_name,emp.department_id,lct.city,lct.location_id #查询字段
+FROM employees emp,departments dept, locations lct #查询表并起别名
+WHERE emp.department_id = dept.department_id AND lct.location_id = dept.location_id AND emp.last_name = 'Abel' #表的连接条件
+ORDER BY emp.employee_id; #排序
+
+/* result
++-------------+-----------+-----------------+---------------+--------+-------------+
+| employee_id | last_name | department_name | department_id | city   | location_id |
++-------------+-----------+-----------------+---------------+--------+-------------+
+|         174 | Abel      | Sales           |            80 | Oxford |        2500 |
++-------------+-----------+-----------------+---------------+--------+-------------+
+*/
+```
+
+
+
+### 3. 多表查询的分类
+
+- 等值连接 vs 非等值连接
+  - 使用 = 连接，即等值连接，其他则为非等值连接
+
+```sql
+SELECT employee_id,department_name,employees.department_id
+FROM employees,departments 
+WHERE employees.department_id = departments.department_id; #等值连接，使用=的连接
+
+SELECT e.last_name, e.salary, j.grade_level
+FROM employees e, job_grades j
+WHERE e.salary BETWEEN j.lowest_sal AND j.highest_sal #非等值连接
+```
+
+- 自连接 vs 非自连接
+  - 表内的连接为自链接， 查询字段均属于同张表
+  - 不同表连接为非自连接，例子可参考多表查询实现小节
+
+```sql
+/*
+自连接
+查询员工id，员工姓名及其管理者id和姓名
+*/
+DESC employees;
+/*表结构
++----------------+-------------+------+-----+---------+-------+
+| Field          | Type        | Null | Key | Default | Extra |
++----------------+-------------+------+-----+---------+-------+
+| employee_id    | int         | NO   | PRI | 0       |       |
+| first_name     | varchar(20) | YES  |     | NULL    |       |
+| last_name      | varchar(25) | NO   |     | NULL    |       |
+| email          | varchar(25) | NO   | UNI | NULL    |       |
+| phone_number   | varchar(20) | YES  |     | NULL    |       |
+| hire_date      | date        | NO   |     | NULL    |       |
+| job_id         | varchar(10) | NO   | MUL | NULL    |       |
+| salary         | double(8,2) | YES  |     | NULL    |       |
+| commission_pct | double(2,2) | YES  |     | NULL    |       |
+| manager_id     | int         | YES  | MUL | NULL    |       |
+| department_id  | int         | YES  | MUL | NULL    |       |
++----------------+-------------+------+-----+---------+-------+
+*/
+SELECT emp.employee_id, emp.last_name, mgr.employee_id, mgr.last_name 
+FROM employees emp, employees mgr #分别起别名
+WHERE emp.manager_id = mgr.employee_id; #将员工的管理者id和身为管理者员工的id连接
+
+/* result
++-------------+-------------+-------------+-----------+
+| employee_id | last_name   | employee_id | last_name |
++-------------+-------------+-------------+-----------+
+|         101 | Kochhar     |         100 | King      |
+|         102 | De Haan     |         100 | King      |
+|         103 | Hunold      |         102 | De Haan   |
+|         104 | Ernst       |         103 | Hunold    |
+|         105 | Austin      |         103 | Hunold    |
+|         106 | Pataballa   |         103 | Hunold    |
+|         107 | Lorentz     |         103 | Hunold    |
+|         108 | Greenberg   |         101 | Kochhar   |
++----------------+-------------+------+-----+---------+
+*/
+```
+
+- 内连接 vs 外连接
+
+  - 合并具有同一列的两个以上的表的行, **结果集中不包含一个表与另一个表不匹配的行**
+
+  - 两个表在连接过程中除了返回满足连接条件的行以外**还返回左（或右）表中不满足条件的 行 ，这种连接称为左（或右） 外连接。**没有匹配的行时, 结果表中相应的列为空(NULL)。
+
+  - 如果是左外连接，则连接条件中左边的表也称为 主表 ，右边的表称为 从表 。 
+
+    如果是右外连接，则连接条件中右边的表也称为 主表 ，左边的表称为 从表 。
+
+    满外连接，左外和右外均查出来
+
+  - SQL92语法实现外连接：使用 +  (但是在MySQL中不支持SQL92语法外连接写法！)
+
+  - SQL99语法实现外连接：使用 JOIN ... ON（详细请看下一节）
+
+```sql
+/*
+SQL92外连接例子
+查询所有的员工的last_name,department_name信息（注意所有，可能有的员工没有部门）
+*/
+
+#SQL92语法实内外连接：以上例子均为内连接，可参考，略
+#SQL92语法实现外连接：使用 + (但是在MySQL中不支持SQL92语法外连接写法！)
+SELECT employee_id, department_name
+FROM employees e, departments d
+WHERE e.department_id = d.department_id(+);
+```
+
+
+
+### 4. SQL99的多表查询
+
+#### SQL99实现内连接
+
+- JOIN ... ON ...
+
+```sql
+/*
+SQL99内连接例子，多表查询实现例子小节转换
+使用employees\departments\locations 三个表来获取名为'Abel'员工的所在城市
+*/
+SELECT e.last_name,d.department_name,l.city #打印的字段
+FROM employees e JOIN departments d			#employees加入departments
+ON e.department_id = d.department_id		#连接条件
+JOIN locations l							#接入locations表
+ON d.location_id = l.location_id			#连接条件
+WHERE e.last_name = 'Abel';					#过滤信息
+```
+
+#### SQL99实现外连接
+
+- LEFT JOIN \ RIGHT OUTER JOIN ... ON ...
+
+```sql
+/*
+SQL99左外连接例子
+查询所有的员工的last_name,department_name信息（注意所有，可能有的员工没有部门）
+*/
+SELECT e.last_name,d.department_name
+FROM employees e LEFT JOIN departments d #employees主表，departments从表
+ON e.department_id = d.department_id; #连接条件
+
+/*
+SQL99右外连接例子
+查询所有的部门的员工last_name,department_name信息（注意所有，可能有的员工没有部门）
+*/
+SELECT d.department_name, e.last_name
+FROM employees e RIGHT OUTER JOIN departments d #departments主表，employees从表
+ON e.department_id = d.department_id; #连接条件
+```
+
+#### SQL99实现满外连接
+
+- FULL OUTER JOIN ... ON ...
+
+```
+/*
+SQL99满外连接例子（注MySQL不支持）
+*/
+SELECT d.department_name, e.last_name
+FROM employees e FULL OUTER JOIN departments d #满外连接
+ON e.department_id = d.department_id; #连接条件
+```
+
+#### UNION操作符使用
+
+##### UNION概念
+
+- 合并查询结果 利用UNION关键字，可以给出多条SELECT语句，并将它们的结果组合成单个结果集。合并 时，两个表对应的列数和数据类型必须相同，并且相互对应。各个SELECT语句之间使用UNION或UNION ALL关键字分隔。
+- UNION：操作符返回两个查询的结果集的并集，去除重复记录。
+- UNION ALL：操作符返回两个查询的结果集的并集。对于两个结果集的重复部分，不去重。
+- 注意：执行UNION ALL语句时所需要的资源比UNION语句少。如果明确知道合并数据后的结果数据 不存在重复数据，或者不需要去除重复的数据，则尽量使用UNION ALL语句，以提高数据查询的效率。
+
+##### JOINS的7中使用
+
+- 内连接 A ∩ B
+
+```sql
+SELECT employee_id,last_name,department_name
+FROM employees e JOIN departments d
+ON e.`department_id` = d.`department_id`;
+```
+
+- 左外连接 A
+
+```sql
+SELECT employee_id,last_name,department_name
+FROM employees e LEFT JOIN departments d
+ON e.`department_id` = d.`department_id`;
+```
+
+- 右外连接 B
+
+```sql
+SELECT employee_id,last_name,department_name
+FROM employees e RIGHT JOIN departments d
+ON e.`department_id` = d.`department_id`;
+```
+
+- A - A ∩ B
+
+```sql
+SELECT employee_id,last_name,department_name
+FROM employees e LEFT JOIN departments d
+ON e.`department_id` = d.`department_id`
+WHERE d.`department_id` IS NULL
+```
+
+- B - A ∩ B
+
+```sql
+SELECT employee_id,last_name,department_name
+FROM employees e RIGHT JOIN departments d
+ON e.`department_id` = d.`department_id`
+WHERE e.`department_id` IS NULL
+```
+
+- 满外连接 A U B  或  A + (B - A ∩ B)
+
+```sql
+#方式一 A U B:
+SELECT employee_id,last_name,department_name
+FROM employees e LEFT JOIN departments d
+ON e.`department_id` = d.`department_id`;
+UNION #去重
+SELECT employee_id,last_name,department_name
+FROM employees e RIGHT JOIN departments d
+ON e.`department_id` = d.`department_id`;
+
+#方式二 A + (B - A ∩ B):
+SELECT employee_id,last_name,department_name
+FROM employees e LEFT JOIN departments d
+ON e.`department_id` = d.`department_id`;
+UNION ALL #不去重
+SELECT employee_id,last_name,department_name
+FROM employees e RIGHT JOIN departments d
+ON e.`department_id` = d.`department_id`
+WHERE e.`department_id` IS NULL
+
+```
+
+- (A - A ∩ B) + (B - A ∩ B)
+
+```sql
+SELECT employee_id,last_name,department_name
+FROM employees e LEFT JOIN departments d
+ON e.`department_id` = d.`department_id`
+WHERE d.`department_id` IS NULL
+UNION ALL
+SELECT employee_id,last_name,department_name
+FROM employees e RIGHT JOIN departments d
+ON e.`department_id` = d.`department_id`
+WHERE e.`department_id` IS NULL
+```
+
+
+
+#### MySQL实现满外连接
+
+- 参考上一节JOINS的7中用法之满外连接
