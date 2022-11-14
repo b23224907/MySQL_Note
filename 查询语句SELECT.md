@@ -1,3 +1,5 @@
+
+
 # SELCT查询语句
 
 
@@ -637,7 +639,7 @@ ON e.department_id = d.department_id; #连接条件
 - UNION ALL：操作符返回两个查询的结果集的并集。对于两个结果集的重复部分，不去重。
 - 注意：执行UNION ALL语句时所需要的资源比UNION语句少。如果明确知道合并数据后的结果数据 不存在重复数据，或者不需要去除重复的数据，则尽量使用UNION ALL语句，以提高数据查询的效率。
 
-##### JOINS的7中使用
+##### JOINS的7种使用
 
 - 内连接 A ∩ B
 
@@ -724,3 +726,312 @@ WHERE e.`department_id` IS NULL
 #### MySQL实现满外连接
 
 - 参考上一节JOINS的7中用法之满外连接
+
+
+
+#### SQL99语法新特性
+
+##### 1. 自然连接
+
+- NATURAL JOIN 
+- 它会帮你字段查询两张连接表中**所有相同的字段**，然后进行等值连接
+
+```sql
+#SQL92
+SELECT employee_id,last_name,department_name
+FROM employees e JOIN departments d
+ON e.`department_id` = d.`department_id`
+AND e.`manager_id` = d.`manager_id`;
+
+#SQL99
+SELECT employee_id,last_name,department_name
+FROM employees e NATURAL JOIN departments d;
+```
+
+##### 2. USING连接
+
+- 当我们进行连接的时候，SQL99还支持使用 USING 指定数据表里的 同名字段 进行等值连接。但是只能配 合JOIN一起使用。
+
+```sql
+SELECT employee_id,last_name,department_name
+FROM employees e ,departments d
+WHERE e.department_id = d.department_id;
+#等价
+SELECT employee_id,last_name,department_name
+FROM employees e JOIN departments d
+USING (department_id);
+```
+
+
+
+#### 注意
+
+- 我们要 控制连接表的数量 。多表连接就相当于嵌套 for 循环一样，非常消耗资源，会让 SQL 查询性能下 降得很严重，因此不要连接不必要的表。在许多 DBMS 中，也都会有最大连接表的限制。
+- 【强制】**超过三个表禁止 join**。需要 join 的字段，数据类型保持绝对一致；多表关联查询时， 保证被关联的字段需要有**索引**。
+- 说明：即使双表 join 也要注意表索引、SQL 性能。
+
+
+
+
+
+
+
+## 函数
+
+
+
+### 1. 基本函数
+
+| 函数                | 用法                                                         |
+| ------------------- | ------------------------------------------------------------ |
+| ABS(x)              | 返回x的绝对值                                                |
+| SIGN(X)             | 返回X的符号。正数返回1，负数返回-1，0返回0                   |
+| PI()                | 返回圆周率的值                                               |
+| CEIL(x)             | CEILING(x) 返回大于或等于某个值的最小整数                    |
+| FLOOR(x)            | 返回小于或等于某个值的最大整数                               |
+| LEAST(e1,e2,e3…)    | 返回列表中的最小值                                           |
+| GREATEST(e1,e2,e3…) | 返回列表中的最大值                                           |
+| MOD(x,y)            | 返回X除以Y后的余数                                           |
+| RAND()              | 返回0~1的随机值                                              |
+| RAND(x)             | 返回0~1的随机值，其中x的值用作种子值，相同的X值会产生相同的随机<br/>数 |
+| ROUND(x)            | 返回一个对x的值进行四舍五入后，最接近于X的整数               |
+| ROUND(x,y)          | 返回一个对x的值进行四舍五入后最接近X的值，并保留到小数点后面Y位 |
+| TRUNCATE(x,y)       | 返回数字x截断为y位小数的结果                                 |
+| SQRT(x)             | 返回x的平方根。当X的值为负数时，返回NULL                     |
+
+
+
+### 2. 数学函数
+
+| 函数                 | 用法                                                         |
+| -------------------- | ------------------------------------------------------------ |
+| RADIANS(x)           | 将角度转化为弧度，其中，参数x为角度值                        |
+| DEGREES(x)           | 将弧度转化为角度，其中，参数x为弧度值                        |
+| SIN(x)               | 返回x的正弦值，其中，参数x为弧度值                           |
+| ASIN(x)              | 返回x的反正弦值，即获取正弦为x的值。如果x的值不在-1到1之间，则返回NULL |
+| COS(x)               | 返回x的余弦值，其中，参数x为弧度值                           |
+| ACOS(x)              | 返回x的反余弦值，即获取余弦为x的值。如果x的值不在-1到1之间，则返回NULL |
+| TAN(x)               | 返回x的正切值，其中，参数x为弧度值                           |
+| ATAN(x)              | 返回x的反正切值，即返回正切值为x的值                         |
+| ATAN2(m,n)           | 返回两个参数的反正切值                                       |
+| COT(x)               | 返回x的余切值，其中，X为弧度值                               |
+| POW(x,y)，POWER(X,Y) | 返回x的y次方                                                 |
+| EXP(X)               | 返回e的X次方，其中e是一个常数，2.718281828459045             |
+| LN(X)，LOG(X)        | 返回以e为底的X的对数，当X <= 0 时，返回的结果为NULL          |
+| LOG10(X)             | 返回以10为底的X的对数，当X <= 0 时，返回的结果为NULL         |
+| LOG2(X)              | 返回以2为底的X的对数，当X <= 0 时，返回NULL                  |
+
+
+
+### 3. 进制转换函数
+
+| 函数          | 用法                     |
+| ------------- | ------------------------ |
+| BIN(x)        | 返回x的二进制编码        |
+| HEX(x)        | 返回x的十六进制编码      |
+| OCT(x)        | 返回x的八进制编码        |
+| CONV(x,f1,f2) | 返回f1进制数变成f2进制数 |
+
+
+
+### 4. 字符串函数
+
+| 函数                              | 用法                                                         |
+| --------------------------------- | ------------------------------------------------------------ |
+| ASCII(S)                          | 返回字符串S中的第一个字符的ASCII码值                         |
+| CHAR_LENGTH(s)                    | 返回字符串s的字符数。作用与CHARACTER_LENGTH(s)相同           |
+| LENGTH(s)                         | 返回字符串s的字节数，和字符集有关                            |
+| CONCAT(s1,s2,......,sn)           | 连接s1,s2,......,sn为一个字符串                              |
+| CONCAT_WS(x, s1,s2,......,sn)     | 同CONCAT(s1,s2,...)函数，但是每个字符串之间要加上            |
+| INSERT(str, idx, len, replacestr) | 将字符串str从第idx位置开始，len个字符长的子串替换为字符串replacestr |
+| REPLACE(str, a, b)                | 用字符串b替换字符串str中所有出现的字符串a                    |
+| UPPER(s) 或 UCASE(s)              | 将字符串s的所有字母转成大写字母                              |
+| LOWER(s) 或LCASE(s)               | 将字符串s的所有字母转成小写字母                              |
+| LEFT(str,n)                       | 返回字符串str最左边的n个字符                                 |
+| RIGHT(str,n)                      | 返回字符串str最右边的n个字符                                 |
+| LPAD(str, len, pad)               | 用字符串pad对str最左边进行填充，直到str的长度为len个字符     |
+| RPAD(str ,len, pad)               | 用字符串pad对str最右边进行填充，直到str的长度为len个字符     |
+| LTRIM(s)                          | 去掉字符串s左侧的空格                                        |
+| RTRIM(s)                          | 去掉字符串s右侧的空格                                        |
+| TRIM(s)                           | 去掉字符串s开始与结尾的空格                                  |
+| TRIM(s1 FROM s)                   | 去掉字符串s开始与结尾的s1                                    |
+| TRIM(LEADING s1 FROM s)           | 去掉字符串s开始处的s1                                        |
+| TRIM(TRAILING s1 FROM s)          | 去掉字符串s结尾处的s1                                        |
+| REPEAT(str, n)                    | 返回str重复n次的结果                                         |
+| SPACE(n)                          | SPACE(n)                                                     |
+| STRCMP(s1,s2)                     | STRCMP(s1,s2)                                                |
+| SUBSTR(s,index,len)               | 返回从字符串s的index位置其len个字符，作用与SUBSTRING(s,n,len)、 MID(s,n,len)相同 |
+| LOCATE(substr,str)                | 返回字符串substr在字符串str中首次出现的位置，作用于POSITION(substr IN str)、INSTR(str,substr)相同。未找到，返回0 |
+| ELT(m,s1,s2,…,sn)                 | 返回指定位置的字符串，如果m=1，则返回s1，如果m=2，则返回s2，如 果m=n，则返回sn |
+| FIELD(s,s1,s2,…,sn)               | 返回字符串s在字符串列表中第一次出现的位置                    |
+| FIND_IN_SET(s1,s2)                | 返回字符串s1在字符串s2中出现的位置。其中，字符串s2是一个以逗号分 隔的字符串 |
+| REVERSE(s)                        | 返回s反转后的字符串                                          |
+| NULLIF(value1,value2)             | 比较两个字符串，如果value1与value2相等，则返回NULL，否则返回 value1 |
+
+**注意：MySQL中，字符串的位置是从1开始的。**
+
+
+
+### 5. 日期和时间函数
+
+#### 5.1 获取时间
+
+| 函数                                                         | 用法                            |
+| ------------------------------------------------------------ | ------------------------------- |
+| CURDATE() ，CURRENT_DATE()                                   | 返回当前日期，只包含年、 月、日 |
+| CURTIME() ， CURRENT_TIME()                                  | 返回当前时间，只包含时、 分、秒 |
+| NOW() / SYSDATE() / CURRENT_TIMESTAMP() / LOCALTIME() / LOCALTIMESTAMP() | 返回当前系统日期和时间          |
+| UTC_DATE()                                                   | 返回UTC（世界标准时间） 日期    |
+| UTC_TIME()                                                   | 返回UTC（世界标准时间） 时间    |
+
+#### 5.2 日期与时间戳的转换
+
+| 函数                     | 用法                                                         |
+| ------------------------ | ------------------------------------------------------------ |
+| UNIX_TIMESTAMP()         | 以UNIX时间戳的形式返回当前时间。SELECT UNIX_TIMESTAMP() - >1634348884 |
+| UNIX_TIMESTAMP(date)     | 将时间date以UNIX时间戳的形式返回。                           |
+| FROM_UNIXTIME(timestamp) | 将UNIX时间戳的时间转换为普通格式的时间                       |
+
+#### 5.3 获取月份、星期、星期数、天数等函数
+
+| 函数                                     | 用法                                             |
+| ---------------------------------------- | ------------------------------------------------ |
+| YEAR(date) / MONTH(date) / DAY(date)     | 返回具体的日期值                                 |
+| HOUR(time) / MINUTE(time) / SECOND(time) | 返回具体的时间值                                 |
+| MONTHNAME(date)                          | 返回月份：January，..                            |
+| DAYNAME(date)                            | 返回星期几：MONDAY，TUESDAY.....SUNDAY           |
+| WEEKDAY(date)                            | 返回周几，注意，周1是0，周2是1，。。。周日是6    |
+| QUARTER(date)                            | 返回日期对应的季度，范围为1～4                   |
+| WEEK(date) ， WEEKOFYEAR(date)           | 返回一年中的第几周                               |
+| DAYOFYEAR(date)                          | 返回日期是一年中的第几天                         |
+| DAYOFMONTH(date)                         | 返回日期位于所在月份的第几天                     |
+| DAYOFWEEK(date)                          | 返回周几，注意：周日是1，周一是2，。。。周六是 7 |
+| EXTRACT(type FROM date)                  | EXTRACT(type FROM date)                          |
+
+#### 5.4  时间和秒钟转换的函数
+
+| 函数                 | 用法                                                         |
+| -------------------- | ------------------------------------------------------------ |
+| TIME_TO_SEC(time)    | 将 time 转化为秒并返回结果值。转化的公式为： 小时*3600+分钟 *60+秒 |
+| SEC_TO_TIME(seconds) | 将 seconds 描述转化为包含小时、分钟和秒的时间                |
+
+#### 5.5  计算日期和时间的函数
+
+| 函数                                                         | 用法                                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| DATE_ADD(datetime, INTERVAL expr type)， ADDDATE(date,INTERVAL expr type) | 返回与给定日期时间相差INTERVAL时 间段的日期时间              |
+| DATE_SUB(date,INTERVAL expr type)， SUBDATE(date,INTERVAL expr type) | 返回与date相差INTERVAL时间间隔的 日期                        |
+| ADDTIME(time1,time2)                                         | 返回time1加上time2的时间。当time2为一个数字时，代表的是 秒 ，可以为负数 |
+| SUBTIME(time1,time2)                                         | 返回time1减去time2后的时间。当time2为一个数字时，代表的 是 秒 ，可以为负数 |
+| DATEDIFF(date1,date2)                                        | 返回date1 - date2的日期间隔天数                              |
+| TIMEDIFF(time1, time2)                                       | 返回time1 - time2的时间间隔                                  |
+| FROM_DAYS(N)                                                 | 返回从0000年1月1日起，N天以后的日期                          |
+| TO_DAYS(date)                                                | 返回日期date距离0000年1月1日的天数                           |
+| LAST_DAY(date)                                               | 返回date所在月份的最后一天的日期                             |
+| MAKEDATE(year,n)                                             | 针对给定年份与所在年份中的天数返回一个日期                   |
+| MAKETIME(hour,minute,second)                                 | 将给定的小时、分钟和秒组合成时间并返回                       |
+| PERIOD_ADD(time,n)                                           | 返回time加上n后的时间                                        |
+
+#### 5.6 日期的格式化与解析
+
+| 函数                              | 用法                                       |
+| --------------------------------- | ------------------------------------------ |
+| DATE_FORMAT(date,fmt)             | 按照字符串fmt格式化日期date值              |
+| TIME_FORMAT(time,fmt)             | 按照字符串fmt格式化时间time值              |
+| GET_FORMAT(date_type,format_type) | 返回日期字符串的显示格式                   |
+| STR_TO_DATE(str, fmt)             | 按照字符串fmt对str进行解析，解析为一个日期 |
+
+
+
+| 字符    | 说明                                                         |
+| ------- | ------------------------------------------------------------ |
+| %Y      | 4位数字表示年份                                              |
+| %y      | 表示两位数字表示年份                                         |
+| %M      | 月名表示月份（January,....）                                 |
+| %m      | 两位数字表示月份 （01,02,03。。。）                          |
+| %b      | 缩写的月名（Jan.，Feb.，....）                               |
+| %c      | 数字表示月份（1,2,3,...）                                    |
+| %D      | 英文后缀表示月中的天数 （1st,2nd,3rd,...）                   |
+| %d      | 两位数字表示月中的天数(01,02...)                             |
+| %e      | 数字形式表示月中的天数 （1,2,3,4,5.....）                    |
+| %H      | 两位数字表示小数，24小时制 （01,02..）                       |
+| %h 和%I | 两位数字表示小时，12小时制 （01,02..）                       |
+| %k      | 数字形式的小时，24小时制(1,2,3)                              |
+| %l      | 数字形式表示小时，12小时制 （1,2,3,4....）                   |
+| %i      | 两位数字表示分钟（00,01,02）                                 |
+| %S 和%s | 两位数字表示秒(00,01,02...)                                  |
+| %W      | 一周中的星期名称（Sunday...）                                |
+| %a      | 一周中的星期缩写（Sun.， Mon.,Tues.，..）                    |
+| %w      | 以数字表示周中的天数 (0=Sunday,1=Monday....)                 |
+| %j      | 以3位数字表示年中的天数(001,002...)                          |
+| %U      | 以数字表示年中的第几周， （1,2,3。。）其中Sunday为周中第一 天 |
+| %u      | 以数字表示年中的第几周， （1,2,3。。）其中Monday为周中第一 天 |
+| %T      | 24小时制                                                     |
+| %p      | AM或PM                                                       |
+| %%      | 表示%                                                        |
+
+
+
+### 6. 流程处理函数
+
+| 函数                                                         | 用法                                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| IF(value,value1,value2)                                      | 如果value的值为TRUE，返回value1， 否则返回value2             |
+| IFNULL(value1, value2)                                       | 如果value1不为NULL，返回value1，否 则返回value2              |
+| CASE WHEN 条件1 THEN 结果1 WHEN 条件2 THEN 结果2 .... [ELSE resultn] END | 相当于Java的if...else if...else...                           |
+| CASE expr WHEN 常量值1 THEN 值1 WHEN 常量值1 THEN 值1 .... [ELSE 值n] END | CASE expr WHEN 常量值1 THEN 值1 WHEN 常量值1 THEN 值1 .... [ELSE 值n] END |
+
+```sql
+SELECT
+	CASE
+WHEN 1 > 0 THEN
+	'1 > 0'
+WHEN 2 > 0 THEN
+	'2 > 0'
+ELSE
+	'3 > 0'
+END;
+
+/* result 
++-----------------------------------------------------------------+
+| 1 > 0                                                           |
++-----------------------------------------------------------------+
+*/
+```
+
+
+
+### 7. 加密与解密函数
+
+| 函数                        | 用法                                                         |
+| --------------------------- | ------------------------------------------------------------ |
+| PASSWORD(str)               | 返回字符串str的加密版本，41位长的字符串。加密结果 不可 逆 ，常用于用户的密码加密 |
+| MD5(str)                    | 返回字符串str的md5加密后的值，也是一种加密方式。若参数为 NULL，则会返回NULL |
+| SHA(str)                    | 从原明文密码str计算并返回加密后的密码字符串，当参数为 NULL时，返回NULL。 SHA加密算法比MD5更加安全 。 |
+| ENCODE(value,password_seed) | 返回使用password_seed作为加密密码加密value                   |
+| DECODE(value,password_seed) | 返回使用password_seed作为加密密码解密value                   |
+
+
+
+### 8. MySQL信息函数
+
+| 函数                                                   | 用法                                                      |
+| ------------------------------------------------------ | --------------------------------------------------------- |
+| VERSION()                                              | 返回当前MySQL的版本号                                     |
+| CONNECTION_ID()                                        | 返回当前MySQL服务器的连接数                               |
+| DATABASE()，SCHEMA()                                   | 返回MySQL命令行当前所在的数据库                           |
+| USER()，CURRENT_USER()、SYSTEM_USER()， SESSION_USER() | 返回当前连接MySQL的用户名，返回结果格式为 “主机名@用户名” |
+| CHARSET(value)                                         | 返回字符串value自变量的字符集                             |
+| COLLATION(value)                                       | 返回字符串value的比较规则                                 |
+
+### 9. 其他类别
+
+| 函数                           | 用法                                                         |
+| ------------------------------ | ------------------------------------------------------------ |
+| FORMAT(value,n)                | 返回对数字value进行格式化后的结果数据。n表示 四舍五入 后保留 到小数点后n位 |
+| CONV(value,from,to)            | 将value的值进行不同进制之间的转换                            |
+| INET_ATON(ipvalue)             | 将以点分隔的IP地址转化为一个数字(\# 以“192.168.1.100”为例，计算方式为192乘以256的3次方，加上168乘以256的2次方，加上1乘以256，再加上 100。) |
+| INET_NTOA(value)               | 将数字形式的IP地址转化为以点分隔的IP地址                     |
+| BENCHMARK(n,expr)              | 将表达式expr重复执行n次。用于测试MySQL处理expr表达式所耗费 的时间 |
+| CONVERT(value USING char_code) | 将value所使用的字符编码修改为char_code                       |
+
