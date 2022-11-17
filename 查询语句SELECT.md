@@ -1116,6 +1116,7 @@ END;
 
 - 聚合函数作用于一组数据，并对一组数据返回一个值。
 
+- 注意：MySQL中聚合函数不能嵌套，Oracle可以
 
 
 #### 1. 常见的几个聚合函数
@@ -1274,7 +1275,7 @@ GROUP BY department_id WITH ROLLUP; #多一条记录， 全部的平均数
 #### 3. HAVING
 
 - 用来过滤数据
-- 如果过滤条件中使用了聚合函数，则必须使用HAVING来替代WHERE。否则，报错。
+- **如果过滤条件中使用了聚合函数，则必须使用HAVING来替代WHERE。否则，报错。**
 - HAVING必须声明在GROUP BY后面
 - 在开发中，使用HAVING的前提是SQL中使用了GROUP BY
 
@@ -1314,5 +1315,365 @@ SELECT department_id, MAX(salary)
 FROM employees
 GROUP BY department_id
 HAVING MAX(salary) > 10000 AND department_id IN (20,30);
+```
+
+
+
+
+
+## 子查询
+
+- 子查询指一个查询语句嵌套在另一个查询语句内部的查询
+- **在SELECT中， 除了GROUP BY 和LIMIT 外， 其他位置都可以声明子查询**
+- 当可以使用自连接的时候，建议使用自连接，因为相同复杂度下自连接处理比子查询快（具体情况具体分析）、
+
+```sql
+#查询工资大于 Abel工资的员工
+SELECT
+	last_name,
+	salary
+FROM
+	employees
+WHERE
+	salary > (
+		SELECT
+			salary
+		FROM
+			employees
+		WHERE
+			last_name = 'Abel'
+	);
+```
+
+- 子查询（内查询）在主查询之前一次执行完成。 
+- 子查询的结果被主查询（外查询）使用 。
+-  注意事项 
+  - 子查询要包含在括号内
+  -  将子查询放在比较条件的右侧
+  -  单行操作符对应单行子查询，多行操作符对应多行子查询
+
+
+
+### 1. 子查询的分类
+
+#### 1.1 单行 vs 多行 子查询
+
+- 我们按内查询的结果返回一条还是多条记录，将子查询分为 单行子查询 、 多行子查询 。
+
+##### 1.1.2 单行子查询
+
+- 操作符：=, >, >=, <, <=, <>
+
+```sql
+#查询与141号员工的manager_id，department_id相同的其他员工的employee_id，manager_id，department_id
+SELECT
+	employee_id,
+	manager_id,
+	department_id
+FROM
+	employees
+WHERE
+	manager_id = (
+		SELECT
+			manager_id
+		FROM
+			employees
+		WHERE
+			employee_id = 141
+	)
+AND department_id = (
+	SELECT
+		department_id
+	FROM
+		employees
+	WHERE
+		employee_id = 141
+)
+and employee_id != 141;
+
+#查询最低工资大于50号部门最低工资的部门id和其最低工资
+SELECT
+	department_id,
+	MIN(salary)
+FROM
+	employees
+GROUP BY
+	department_id
+HAVING
+	MIN(salary) > (
+		SELECT
+			MIN(salary)
+		FROM
+			employees
+		WHERE
+			department_id = 110
+	);
+
+#题目：显式员工的employee_id,last_name和location。
+#其中，若员工department_id与location_id为1800的department_id相同，
+#则location为’Canada’，其余则为’USA’。
+SELECT
+	employee_id,
+	last_name,
+	CASE department_id
+WHEN (
+	SELECT
+		department_id
+	FROM
+		departments
+	WHERE
+		location_id = 1800
+) THEN
+	'Canada'
+ELSE
+	'USA'
+END "location",
+ department_id
+FROM
+	employees;
+```
+
+##### 1.1.2 多行子查询 
+
+| 操作符 | 含义                                                         |
+| ------ | ------------------------------------------------------------ |
+| IN     | 等于列表中的**任意一个**                                     |
+| ANY    | 需要和单行比较操作符一起使用，和子查询返回的**某一个**值比较（或 成立） |
+| ALL    | 需要和单行比较操作符一起使用，和子查询返回的**所有**值比较 （与 成立） |
+| SOME   | 实际上是ANY的别名，作用相同，一般常使用ANY                   |
+
+- IN
+
+```sql
+#查询与141号和160号员工的manager_id，department_id相同的其他员工的employee_id，manager_id，department_id
+SELECT
+	employee_id,
+	manager_id,
+	department_id
+FROM
+	employees
+WHERE
+	manager_id IN (
+		SELECT
+			manager_id
+		FROM
+			employees
+		WHERE
+			employee_id IN (141, 160)
+	)
+AND department_id IN (
+	SELECT
+		department_id
+	FROM
+		employees
+	WHERE
+		employee_id IN (141, 160)
+)
+and employee_id != 141 AND employee_id != 160;
+```
+
+- ANY / ALL （ANY相当于 **或**， ALL相当于 **与**）
+
+```sql
+#ANY
+#题目：返回其它job_id中比job_id为‘IT_PROG’部门任一工资低的员工的员工号、
+#姓名、job_id 以及salary
+SELECT
+	employee_id,
+	last_name,
+	job_id,
+	salary
+FROM
+	employees
+WHERE
+	salary < ALL (
+		SELECT
+			salary
+		FROM
+			employees
+		WHERE
+			job_id = 'IT_PROG'
+	)
+AND job_id != 'IT_PROG';
+
+#题目：返回其它job_id中比job_id为‘IT_PROG’部门所有工资低的员工的员工号、
+#姓名、job_id 以及salary
+SELECT
+	employee_id,
+	last_name,
+	job_id,
+	salary
+FROM
+	employees
+WHERE
+	salary < ALL (
+		SELECT
+			salary
+		FROM
+			employees
+		WHERE
+			job_id = 'IT_PROG'
+	)
+AND job_id != 'IT_PROG';
+
+#题目：查询平均工资最低的部门id
+#MySQL中聚合函数是不能嵌套使用的。
+SELECT
+	department_id,
+	AVG(salary)
+FROM
+	employees
+GROUP BY
+	department_id
+HAVING
+	AVG(salary) <= ALL (
+		SELECT
+			AVG(salary)
+		FROM
+			employees
+		GROUP BY
+			department_id
+		HAVING
+			department_id IS NOT NULL
+	)
+AND department_id IS NOT NULL;
+```
+
+
+
+#### 1.2 相关 vs 不相关 子查询
+
+##### 1.2.1 相关子查询
+
+- 我们按内查询是否被执行多次，将子查询划分为 相关(或关联)子查询 和 不相关(或非关联)子查询 。 
+- 子查询从数据表中查询了数据结果，如果这个数据结果只执行一次，然后这个数据结果作为主查询的条件进行执行，那么这样的子查询叫做不相关子查询。 
+- 同样，如果子查询需要执行多次，即采用循环的方式，先从外部查询开始，每次都传入子查询进行查询，然后再将结果反馈给外部，这种嵌套的执行方式就称为相关子查询。
+
+![](D:\git_clone\MySQL_Note\MySQL_Note\相关子查询.png)
+
+相关子查询example: （以上例子均为不相关子查询）
+
+```sql
+#题目：查询员工中工资大于本部门平均工资的员工的last_name,salary和其department_id
+#方式1：使用相关子查询
+SELECT
+	last_name,
+	salary,
+	department_id
+FROM
+	employees e1
+WHERE
+	salary > (
+		SELECT
+			AVG(salary)
+		FROM
+			employees e2
+		WHERE
+			department_id = e1.department_id
+	);
+
+#方式2：在FROM中声明子查询, 创建一个虚拟表进行比较查询
+SELECT
+	last_name,
+	salary,
+	department_id
+FROM
+	employees e1
+JOIN (
+	SELECT
+		department_id,
+		AVG(salary) avg_sal
+	FROM
+		employees
+	GROUP BY
+		department_id
+) t_dept_avg_sal USING (department_id)
+WHERE
+	e1.salary > t_dept_avg_sal.avg_sal
+AND e1.department_id = t_dept_avg_sal.department_id;
+
+
+#题目：查询员工的id,salary,按照department_name 降序排序
+SELECT
+department_id,
+	employee_id,
+	salary
+FROM
+	employees e
+ORDER BY
+	(
+		SELECT
+			department_name
+		FROM
+			departments d
+		WHERE
+			e.department_id = d.department_id
+	)
+	DESC;
+```
+
+
+
+##### 1.2.2 EXISTS
+
+- EXISTS 与 NOT EXISTS 关键字
+
+- 关联子查询通常也会和 EXISTS操作符一起来使用，用来检查在子查询中是否存在满足条件的行。 
+- **如果在子查询中不存在满足条件的行：** 
+  - 条件返回 FALSE
+  - 继续在子查询中查找 
+- **如果在子查询中存在满足条件的行：**
+  -  不在子查询中继续查找
+  - 条件返回 TRUE 
+- NOT EXISTS关键字表示如果不存在某种条件，则返回TRUE，否则返回FALSE。
+
+
+
+EXISTS example:
+
+```sql
+#题目：查询公司管理者的employee_id，last_name，job_id，department_id信息(是管理者的员工)
+#方式1：自连接
+SELECT DISTINCT mgr.employee_id,mgr.last_name,mgr.job_id,mgr.department_id
+FROM employees emp JOIN employees mgr
+ON emp.manager_id = mgr.employee_id;
+
+#方式2：子查询
+
+SELECT employee_id,last_name,job_id,department_id
+FROM employees
+WHERE employee_id IN (
+			SELECT DISTINCT manager_id
+			FROM employees
+			);
+
+#方式3：使用EXISTS
+SELECT employee_id,last_name,job_id,department_id
+FROM employees e1
+WHERE EXISTS (
+	       SELECT *
+	       FROM employees e2
+	       WHERE e1.`employee_id` = e2.`manager_id`
+	     );
+```
+
+NOT EXISTS example:
+
+```sql
+#题目：查询departments表中，不存在于employees表中的部门的department_id和department_name
+SELECT
+	department_id,
+	department_name
+FROM
+	departments d
+WHERE
+	NOT EXISTS (
+		SELECT
+			*
+		FROM
+			employees e
+		WHERE
+			e.department_id = d.department_id
+	);
 ```
 
