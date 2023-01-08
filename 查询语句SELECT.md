@@ -279,7 +279,7 @@ SELECT 100/0 FROM DUAL; #结果NULL
 ```sql
 /*
 =			等于运算符
-<=>			安全等于运算符
+<=>			安全等于运算符 (可以用来对 NULL 进行判断，两者都为 NULL 时返回值为 1)
 <> or !=	不等于运算符
 <			小于运算符
 <=			小于等于运算符
@@ -1161,6 +1161,7 @@ FROM employees;
 
 - 作用：计算指定字段在查询结构中出现的个数（不包含NULL值）
 - 统计标中的记录数，使用COUNT(*), COUNT(1), COUNT(具体字段)，哪个效率更高（不同引擎不同，MISAM三者效率相同O(1)，InnoDB则COUNT(\*) = COUNT(1) > COUNT(字段)
+- COUNT和**带偏移Offset的LIMIT**不能同时使用（SELECT COUNT(*) FROM table LIMIT 2,3） COUNT结果是NULL
 
 ```sql
 #计算employees表中salary字段的条数， 并计算这个表总条数
